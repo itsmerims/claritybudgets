@@ -1,4 +1,4 @@
-import type { Category, Expense, Budget, Currency } from './types';
+import type { Category, Expense, Budget, Currency, Income } from './types';
 
 export const initialCategories: Category[] = [
   { id: 'cat-1', name: 'Groceries' },
@@ -11,6 +11,8 @@ export const initialCategories: Category[] = [
 ];
 
 export const initialExpenses: Expense[] = [];
+
+export const initialIncomes: Income[] = [];
 
 export const initialBudgets: Budget[] = [];
 
@@ -31,5 +33,3 @@ export const currencies: Currency[] = [
     { code: 'MXN', symbol: '$', name: 'Mexican Peso' },
     { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
 ];
-
-    

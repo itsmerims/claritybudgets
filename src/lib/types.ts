@@ -6,6 +6,13 @@ export interface Expense {
   date: string;
 }
 
+export interface Income {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -22,5 +29,3 @@ export interface Currency {
     symbol: string;
     name: string;
 }
-
-    

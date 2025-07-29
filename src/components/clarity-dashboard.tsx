@@ -2,8 +2,8 @@
 
 import { autoCategorizeExpense } from "@/ai/flows/auto-categorize-expense";
 import { generateSavingTips } from "@/ai/flows/generate-saving-tips";
-import { initialBudgets, initialCategories, currencies } from "@/lib/data";
-import type { Budget, Category, Expense, Currency } from "@/lib/types";
+import { initialBudgets, initialCategories, currencies, initialIncomes } from "@/lib/data";
+import type { Budget, Category, Expense, Currency, Income } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -17,6 +17,9 @@ import {
   Wallet,
   Sparkles,
   ChevronDown,
+  DollarSign,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -56,11 +59,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required."),
   amount: z.coerce.number().positive("Amount must be positive."),
   categoryId: z.string().min(1, "Category is required."),
+  date: z.string().min(1, "Date is required."),
+});
+
+const incomeSchema = z.object({
+  description: z.string().min(1, "Description is required."),
+  amount: z.coerce.number().positive("Amount must be positive."),
   date: z.string().min(1, "Date is required."),
 });
 
@@ -73,6 +83,7 @@ export default function ClarityDashboard() {
   const { toast } = useToast();
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
@@ -80,11 +91,13 @@ export default function ClarityDashboard() {
   // Hydration fix
   useEffect(() => {
     setExpenses([]);
+    setIncomes([]);
     setBudgets([]);
   }, []);
   
 
   const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [isIncomeDialogOpen, setIncomeDialogOpen] = useState(false);
   const [isBudgetDialogOpen, setBudgetDialogOpen] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [isGeneratingTips, setIsGeneratingTips] = useState(false);
@@ -96,6 +109,15 @@ export default function ClarityDashboard() {
       description: "",
       amount: 0,
       categoryId: "",
+      date: new Date().toISOString().split("T")[0],
+    },
+  });
+
+  const incomeForm = useForm<z.infer<typeof incomeSchema>>({
+    resolver: zodResolver(incomeSchema),
+    defaultValues: {
+      description: "",
+      amount: 0,
       date: new Date().toISOString().split("T")[0],
     },
   });
@@ -115,12 +137,12 @@ export default function ClarityDashboard() {
     }, {} as Record<string, Category>);
   }, [categories]);
 
-  const { totalSpent, totalBudget, remainingBudget } = useMemo(() => {
+  const { totalIncome, totalSpent, remainingBalance } = useMemo(() => {
+    const totalIncome = incomes.reduce((sum, inc) => sum + inc.amount, 0);
     const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const totalBudget = budgets.reduce((sum, bud) => sum + bud.amount, 0);
-    const remainingBudget = totalBudget - totalSpent;
-    return { totalSpent, totalBudget, remainingBudget };
-  }, [expenses, budgets]);
+    const remainingBalance = totalIncome - totalSpent;
+    return { totalIncome, totalSpent, remainingBalance };
+  }, [incomes, expenses]);
 
   const spendingByCategory = useMemo(() => {
     return expenses.reduce((acc, expense) => {
@@ -178,6 +200,20 @@ export default function ClarityDashboard() {
     setExpenseDialogOpen(false);
     toast({
       title: "Expense Added",
+      description: `${values.description} for ${currency.symbol}${values.amount} has been logged.`,
+    });
+  }
+  
+  async function handleAddIncome(values: z.infer<typeof incomeSchema>) {
+    const newIncome: Income = {
+      id: `inc-${Date.now()}`,
+      ...values,
+    };
+    setIncomes([newIncome, ...incomes]);
+    incomeForm.reset();
+    setIncomeDialogOpen(false);
+    toast({
+      title: "Income Added",
       description: `${values.description} for ${currency.symbol}${values.amount} has been logged.`,
     });
   }
@@ -358,9 +394,78 @@ export default function ClarityDashboard() {
             </DialogContent>
           </Dialog>
 
+           <Dialog open={isIncomeDialogOpen} onOpenChange={setIncomeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="text-green-600 border-green-600/50 hover:bg-green-600/10 hover:text-green-600">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Income
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Log a New Income</DialogTitle>
+                <DialogDescription>
+                  Enter the details of your income below.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...incomeForm}>
+                <form
+                  onSubmit={incomeForm.handleSubmit(handleAddIncome)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={incomeForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Monthly Salary" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={incomeForm.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Amount</FormLabel>
+                        <FormControl>
+                           <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
+                            <Input type="number" step="0.01" placeholder="0.00" {...field} className="pl-8"/>
+                           </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={incomeForm.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button type="submit">Add Income</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={isExpenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
+              <Button size="sm" variant="destructive">
                 <Plus className="mr-2 h-4 w-4" />
                 Log Expense
               </Button>
@@ -463,42 +568,42 @@ export default function ClarityDashboard() {
       <main className="flex-1 p-4 md:p-6 grid gap-6 md:grid-cols-3 lg:grid-cols-4">
         <Card className="md:col-span-1 lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
-              <span className="text-xl">{currency.symbol}</span>
-              Total Spent
+            <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground text-green-600">
+              <DollarSign className="h-5 w-5" />
+              Total Income
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold font-headline">
-              {currency.symbol}{totalSpent.toFixed(2)}
+            <p className="text-3xl font-bold font-headline text-green-600">
+              {currency.symbol}{totalIncome.toFixed(2)}
             </p>
           </CardContent>
         </Card>
 
         <Card className="md:col-span-1 lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
-              <Landmark className="h-5 w-5" />
-              Total Budget
+            <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground text-red-600">
+              <TrendingUp className="h-5 w-5" />
+              Total Spent
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold font-headline">
-              {currency.symbol}{totalBudget.toFixed(2)}
+            <p className="text-3xl font-bold font-headline text-red-600">
+              {currency.symbol}{totalSpent.toFixed(2)}
             </p>
           </CardContent>
         </Card>
 
-        <Card className={cn("md:col-span-1 lg:col-span-1", remainingBudget < 0 ? 'bg-destructive/10 border-destructive/50' : '')}>
+        <Card className={cn("md:col-span-1 lg:col-span-1", remainingBalance < 0 ? 'bg-destructive/10 border-destructive/50' : '')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
               <Wallet className="h-5 w-5" />
-              Remaining Budget
+              Remaining Balance
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold font-headline">
-              {currency.symbol}{remainingBudget.toFixed(2)}
+              {currency.symbol}{remainingBalance.toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -506,8 +611,8 @@ export default function ClarityDashboard() {
         <Card className="md:col-span-3 lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
-              <TrendingUp className="h-5 w-5" />
-              Budget Tracking
+              <Landmark className="h-5 w-5" />
+              Category Budgets
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -599,44 +704,79 @@ export default function ClarityDashboard() {
         <Card className="md:col-span-3 lg:col-span-4">
           <CardHeader>
             <CardTitle>Recent Transactions</CardTitle>
-            <CardDescription>
-              Your latest logged expenses.
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.length > 0 ? (
-                  expenses.slice(0, 5).map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell className="font-medium">{expense.description}</TableCell>
-                      <TableCell>{categoryMap[expense.categoryId]?.name}</TableCell>
-                      <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">{currency.symbol}{expense.amount.toFixed(2)}</TableCell>
+            <Tabs defaultValue="expenses">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="expenses">
+                  <ArrowDown className="mr-2 h-4 w-4 text-red-500" /> Expenses
+                </TabsTrigger>
+                <TabsTrigger value="income">
+                   <ArrowUp className="mr-2 h-4 w-4 text-green-500" /> Income
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="expenses">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24">
-                      No transactions yet.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {expenses.length > 0 ? (
+                      expenses.slice(0, 5).map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell className="font-medium">{expense.description}</TableCell>
+                          <TableCell>{categoryMap[expense.categoryId]?.name}</TableCell>
+                          <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right font-medium text-red-600">-{currency.symbol}{expense.amount.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center h-24">
+                          No expenses yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+              <TabsContent value="income">
+                 <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {incomes.length > 0 ? (
+                      incomes.slice(0, 5).map((income) => (
+                        <TableRow key={income.id}>
+                          <TableCell className="font-medium">{income.description}</TableCell>
+                          <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right font-medium text-green-600">+{currency.symbol}{income.amount.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center h-24">
+                          No income yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </main>
     </div>
   );
 }
-
-    
