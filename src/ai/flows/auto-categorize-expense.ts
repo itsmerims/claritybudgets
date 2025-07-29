@@ -10,9 +10,11 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type {Category} from '@/lib/types';
 
 const AutoCategorizeExpenseInputSchema = z.object({
   description: z.string().describe('The description of the expense.'),
+  categories: z.array(z.object({id: z.string(), name: z.string()})).describe('The list of available categories.'),
 });
 export type AutoCategorizeExpenseInput = z.infer<typeof AutoCategorizeExpenseInputSchema>;
 
@@ -30,11 +32,15 @@ const prompt = ai.definePrompt({
   name: 'autoCategorizeExpensePrompt',
   input: {schema: AutoCategorizeExpenseInputSchema},
   output: {schema: AutoCategorizeExpenseOutputSchema},
-  prompt: `You are a personal finance expert.  Given the description of an expense, you will determine the most appropriate category for it.
+  prompt: `You are a personal finance expert.  Given the description of an expense, you will determine the most appropriate category for it from the provided list.
+
+Available Categories:
+{{#each categories}}- {{this.name}}
+{{/each}}
 
 Description: {{{description}}}
 
-Respond with the category and a confidence level (0-1).`,
+Respond with the category and a confidence level (0-1). The category you choose MUST be one of the available categories.`,
 });
 
 const autoCategorizeExpenseFlow = ai.defineFlow(

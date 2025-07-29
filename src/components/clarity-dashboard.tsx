@@ -264,7 +264,7 @@ export default function ClarityDashboard() {
 
     setIsCategorizing(true);
     try {
-      const result = await autoCategorizeExpense({ description });
+      const result = await autoCategorizeExpense({ description, categories });
       const category = categories.find(
         (c) => c.name.toLowerCase() === result.category.toLowerCase()
       );
