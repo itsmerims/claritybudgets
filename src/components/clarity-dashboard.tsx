@@ -24,7 +24,7 @@ import {
   RefreshCcw,
   LogOut,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { Pie, PieChart, ResponsiveContainer, Cell, Legend } from "recharts";
 import { z } from "zod";
@@ -66,7 +66,9 @@ import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { collection, doc, getDocs, writeBatch, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required."),
@@ -90,15 +92,14 @@ export default function ClarityDashboard() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
 
   useEffect(() => {
-    setIsMounted(true);
     const savedCurrency = localStorage.getItem("clarity-currency");
     if (savedCurrency) {
       const foundCurrency = currencies.find(c => c.code === savedCurrency);
@@ -108,11 +109,60 @@ export default function ClarityDashboard() {
     }
   }, []);
 
-  useEffect(() => {
-    if(isMounted) {
-      localStorage.setItem("clarity-currency", currency.code);
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    setIsLoadingData(true);
+    try {
+      const categoriesRef = collection(db, 'users', user.uid, 'categories');
+      const categoriesSnap = await getDocs(categoriesRef);
+
+      let fetchedCategories: Category[] = [];
+      if (categoriesSnap.empty) {
+        // First time user, create initial categories
+        const batch = writeBatch(db);
+        initialCategories.forEach(cat => {
+            const docRef = doc(categoriesRef);
+            batch.set(docRef, {name: cat.name});
+            fetchedCategories.push({ ...cat, id: docRef.id });
+        });
+        await batch.commit();
+        setCategories(fetchedCategories);
+      } else {
+        fetchedCategories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+        setCategories(fetchedCategories);
+      }
+
+      const expensesQuery = query(collection(db, 'users', user.uid, 'expenses'), orderBy('date', 'desc'));
+      const expensesSnap = await getDocs(expensesQuery);
+      setExpenses(expensesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense)));
+      
+      const incomesQuery = query(collection(db, 'users', user.uid, 'incomes'), orderBy('date', 'desc'));
+      const incomesSnap = await getDocs(incomesQuery);
+      setIncomes(incomesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Income)));
+
+      const budgetsSnap = await getDocs(collection(db, 'users', user.uid, 'budgets'));
+      setBudgets(budgetsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget)));
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not fetch your financial data.",
+      });
+    } finally {
+      setIsLoadingData(false);
     }
-  }, [currency, isMounted]);
+  }, [user, toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+
+  useEffect(() => {
+    localStorage.setItem("clarity-currency", currency.code);
+  }, [currency]);
 
   const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [isIncomeDialogOpen, setIncomeDialogOpen] = useState(false);
@@ -208,56 +258,78 @@ export default function ClarityDashboard() {
   }, [budgets, expenses, categoryMap]);
 
   async function handleAddExpense(values: z.infer<typeof expenseSchema>) {
-    const newExpense: Expense = {
-      id: `exp-${Date.now()}`,
-      ...values,
-    };
-    setExpenses([newExpense, ...expenses]);
-    expenseForm.reset();
-    setExpenseDialogOpen(false);
-    toast({
-      title: "Expense Added",
-      description: `${values.description} for ${currency.symbol}${values.amount} has been logged.`,
-    });
+    if (!user) return;
+    try {
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'expenses'), values);
+      const newExpense: Expense = {
+        id: docRef.id,
+        ...values,
+      };
+      setExpenses([newExpense, ...expenses]);
+      expenseForm.reset();
+      setExpenseDialogOpen(false);
+      toast({
+        title: "Expense Added",
+        description: `${values.description} for ${currency.symbol}${values.amount} has been logged.`,
+      });
+    } catch (error) {
+       console.error("Error adding expense:", error);
+       toast({ variant: "destructive", title: "Error", description: "Could not add expense." });
+    }
   }
   
   async function handleAddIncome(values: z.infer<typeof incomeSchema>) {
-    const newIncome: Income = {
-      id: `inc-${Date.now()}`,
-      ...values,
-    };
-    setIncomes([newIncome, ...incomes]);
-    incomeForm.reset();
-    setIncomeDialogOpen(false);
-    toast({
-      title: "Income Added",
-      description: `${values.description} for ${currency.symbol}${values.amount} has been logged.`,
-    });
+     if (!user) return;
+    try {
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'incomes'), values);
+      const newIncome: Income = {
+        id: docRef.id,
+        ...values,
+      };
+      setIncomes([newIncome, ...incomes]);
+      incomeForm.reset();
+      setIncomeDialogOpen(false);
+      toast({
+        title: "Income Added",
+        description: `${values.description} for ${currency.symbol}${values.amount} has been logged.`,
+      });
+    } catch (error) {
+       console.error("Error adding income:", error);
+       toast({ variant: "destructive", title: "Error", description: "Could not add income." });
+    }
   }
 
   async function handleAddBudget(values: z.infer<typeof budgetSchema>) {
-    const existingBudgetIndex = budgets.findIndex(
-      (b) => b.categoryId === values.categoryId
-    );
-    if (existingBudgetIndex > -1) {
-      const updatedBudgets = [...budgets];
-      updatedBudgets[existingBudgetIndex].amount = values.amount;
-      setBudgets(updatedBudgets);
-    } else {
-      const newBudget: Budget = {
-        id: `bud-${Date.now()}`,
-        ...values,
-      };
-      setBudgets([...budgets, newBudget]);
+    if (!user) return;
+    try {
+      const existingBudget = budgets.find(
+        (b) => b.categoryId === values.categoryId
+      );
+
+      if (existingBudget) {
+        const budgetRef = doc(db, 'users', user.uid, 'budgets', existingBudget.id);
+        await updateDoc(budgetRef, { amount: values.amount });
+        setBudgets(budgets.map(b => b.id === existingBudget.id ? {...b, amount: values.amount} : b));
+      } else {
+        const docRef = await addDoc(collection(db, 'users', user.uid, 'budgets'), values);
+        const newBudget: Budget = {
+          id: docRef.id,
+          ...values,
+        };
+        setBudgets([...budgets, newBudget]);
+      }
+      budgetForm.reset();
+      setBudgetDialogOpen(false);
+      toast({
+        title: "Budget Set",
+        description: `Budget for ${
+          categoryMap[values.categoryId]?.name
+        } set to ${currency.symbol}${values.amount}.`,
+      });
+    } catch (error) {
+       console.error("Error setting budget:", error);
+       toast({ variant: "destructive", title: "Error", description: "Could not set budget." });
     }
-    budgetForm.reset();
-    setBudgetDialogOpen(false);
-    toast({
-      title: "Budget Set",
-      description: `Budget for ${
-        categoryMap[values.categoryId]?.name
-      } set to ${currency.symbol}${values.amount}.`,
-    });
   }
 
   async function handleAutoCategorize() {
@@ -329,8 +401,12 @@ export default function ClarityDashboard() {
     await auth.signOut();
   }
 
-  if (!isMounted) {
-    return null; // or a loading spinner
+  if (isLoadingData) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
   }
   
   return (
@@ -775,7 +851,7 @@ export default function ClarityDashboard() {
                   </TableHeader>
                   <TableBody>
                     {expenses.length > 0 ? (
-                      expenses.slice(0, 5).map((expense) => (
+                      expenses.map((expense) => (
                         <TableRow key={expense.id}>
                           <TableCell className="font-medium">{expense.description}</TableCell>
                           <TableCell>{categoryMap[expense.categoryId]?.name}</TableCell>
@@ -804,7 +880,7 @@ export default function ClarityDashboard() {
                   </TableHeader>
                   <TableBody>
                     {incomes.length > 0 ? (
-                      incomes.slice(0, 5).map((income) => (
+                      incomes.map((income) => (
                         <TableRow key={income.id}>
                           <TableCell className="font-medium">{income.description}</TableCell>
                           <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
