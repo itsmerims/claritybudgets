@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Pie, PieChart, ResponsiveContainer } from "recharts";
+import { Pie, PieChart, ResponsiveContainer, Cell } from "recharts";
 import { z } from "zod";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -169,7 +169,6 @@ export default function ClarityDashboard() {
     return Object.entries(spendingByCategory).map(([name, value]) => ({
       name,
       value,
-      fill: `var(--color-${name.toLowerCase().replace(/ /g, "-")})`,
     }));
   }, [spendingByCategory]);
   
@@ -670,7 +669,11 @@ export default function ClarityDashboard() {
                   nameKey="name"
                   innerRadius={60}
                   strokeWidth={5}
-                />
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={chartConfig[entry.name]?.color} />
+                  ))}
+                </Pie>
               </PieChart>
             </ChartContainer>
             ) : (
