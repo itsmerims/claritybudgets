@@ -20,10 +20,11 @@ import {
   DollarSign,
   ArrowDown,
   ArrowUp,
+  RefreshCcw,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Pie, PieChart, ResponsiveContainer, Cell } from "recharts";
+import { Pie, PieChart, ResponsiveContainer, Cell, Legend } from "recharts";
 import { z } from "zod";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -34,6 +35,8 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
 } from "@/components/ui/chart";
 import {
   Dialog,
@@ -297,7 +300,12 @@ export default function ClarityDashboard() {
     setIsGeneratingTips(true);
     setSavingTips("");
     try {
-      const spendingHabits = JSON.stringify(spendingByCategory, null, 2);
+      const spendingSummary = Object.entries(spendingByCategory)
+        .map(([category, amount]) => `${category}: ${currency.symbol}${amount.toFixed(2)}`)
+        .join('\n');
+        
+      const spendingHabits = `Currency: ${currency.name} (${currency.code})\n${spendingSummary}`;
+
       const result = await generateSavingTips({ spendingHabits });
       setSavingTips(result.savingTips);
     } catch (error) {
@@ -670,10 +678,14 @@ export default function ClarityDashboard() {
                   innerRadius={60}
                   strokeWidth={5}
                 >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={chartConfig[entry.name]?.color} />
+                  {chartData.map((entry) => (
+                    <Cell key={`cell-${entry.name}`} fill={chartConfig[entry.name]?.color} />
                   ))}
                 </Pie>
+                <ChartLegend
+                  content={<ChartLegendContent nameKey="name" />}
+                  className="-translate-y-2"
+                />
               </PieChart>
             </ChartContainer>
             ) : (
@@ -698,19 +710,26 @@ export default function ClarityDashboard() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : savingTips ? (
-              <Alert>
-                <Sparkles className="h-4 w-4" />
-                <AlertTitle>Here are your tips!</AlertTitle>
-                <AlertDescription className="whitespace-pre-line">
-                  {savingTips}
-                </AlertDescription>
-              </Alert>
+              <div className="space-y-4">
+                <Alert>
+                  <Sparkles className="h-4 w-4" />
+                  <AlertTitle>Here are your tips!</AlertTitle>
+                  <AlertDescription className="whitespace-pre-line">
+                    {savingTips}
+                  </AlertDescription>
+                </Alert>
+                <Button onClick={handleGenerateSavingTips} disabled={isGeneratingTips} variant="outline" className="w-full">
+                  <RefreshCcw className="mr-2 h-4 w-4"/>
+                  Generate New Tips
+                </Button>
+              </div>
             ) : (
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-4">
                   Generate tips from our AI financial assistant.
                 </p>
-                <Button onClick={handleGenerateSavingTips} disabled={expenses.length === 0}>
+                <Button onClick={handleGenerateSavingTips} disabled={expenses.length === 0 || isGeneratingTips}>
+                  {isGeneratingTips ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
                   Generate Tips
                 </Button>
               </div>
