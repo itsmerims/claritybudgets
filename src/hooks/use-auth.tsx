@@ -33,20 +33,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (loading) return;
 
     const isAuthPage = pathname === '/login' || pathname === '/signup';
-    const isPublicPage = isAuthPage || pathname === '/';
-
-    if (!user && !isPublicPage) {
+    
+    if (!user && !isAuthPage && pathname !== '/') {
       router.push('/login');
     }
+    
     if (user && isAuthPage) {
       router.push('/dashboard');
     }
   }, [user, loading, router, pathname]);
 
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
-  const isPublicPage = isAuthPage || pathname === '/';
-
-  if (loading || (!user && !isPublicPage)) {
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
