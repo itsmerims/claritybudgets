@@ -25,6 +25,11 @@ export const currencies: Currency[] = [
     { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
     { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
     { code: 'PHP', symbol: '₱', name: 'Philippine Peso' },
+    { code: 'KRW', symbol: '₩', name: 'South Korean Won' },
+    { code: 'BRL', symbol: 'R$', name: 'Brazilian Real' },
+    { code: 'RUB', symbol: '₽', name: 'Russian Ruble' },
+    { code: 'MXN', symbol: '$', name: 'Mexican Peso' },
+    { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
 ];
 
     
