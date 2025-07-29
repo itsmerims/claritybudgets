@@ -82,19 +82,29 @@ const budgetSchema = z.object({
 export default function ClarityDashboard() {
   const { toast } = useToast();
 
+  const [isMounted, setIsMounted] = useState(false);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
 
-  // Hydration fix
   useEffect(() => {
-    setExpenses([]);
-    setIncomes([]);
-    setBudgets([]);
+    setIsMounted(true);
+    const savedCurrency = localStorage.getItem("clarity-currency");
+    if (savedCurrency) {
+      const foundCurrency = currencies.find(c => c.code === savedCurrency);
+      if (foundCurrency) {
+        setCurrency(foundCurrency);
+      }
+    }
   }, []);
-  
+
+  useEffect(() => {
+    if(isMounted) {
+      localStorage.setItem("clarity-currency", currency.code);
+    }
+  }, [currency, isMounted]);
 
   const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [isIncomeDialogOpen, setIncomeDialogOpen] = useState(false);
@@ -303,6 +313,10 @@ export default function ClarityDashboard() {
     }
   }
 
+  if (!isMounted) {
+    return null; // or a loading spinner
+  }
+  
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
@@ -379,7 +393,7 @@ export default function ClarityDashboard() {
                         <FormControl>
                            <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} className="pl-8"/>
+                            <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8"/>
                            </div>
                         </FormControl>
                         <FormMessage />
@@ -435,7 +449,7 @@ export default function ClarityDashboard() {
                         <FormControl>
                            <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} className="pl-8"/>
+                            <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8"/>
                            </div>
                         </FormControl>
                         <FormMessage />
@@ -504,7 +518,7 @@ export default function ClarityDashboard() {
                         <FormControl>
                            <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} className="pl-8"/>
+                            <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8"/>
                            </div>
                         </FormControl>
                         <FormMessage />
