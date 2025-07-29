@@ -32,11 +32,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (loading) return;
 
-    const isAuthPage = pathname === '/login' || pathname === '/signup';
+    const isPublicPage = pathname === '/' || pathname === '/login' || pathname === '/signup';
     
-    if (!user && !isAuthPage) {
+    if (!user && !isPublicPage) {
       router.push('/login');
-    } else if (user && isAuthPage) {
+    } else if (user && (pathname === '/login' || pathname === '/signup')) {
       router.push('/dashboard');
     }
   }, [user, loading, router, pathname]);
@@ -48,6 +48,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       </div>
     );
   }
+
+  const isPublicPage = pathname === '/' || pathname === '/login' || pathname === '/signup';
+
+  if (!user && !isPublicPage) {
+    return (
+         <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+         </div>
+    )
+  }
+
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
