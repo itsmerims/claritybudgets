@@ -2,7 +2,7 @@
 
 import { autoCategorizeExpense } from "@/ai/flows/auto-categorize-expense";
 import { generateSavingTips } from "@/ai/flows/generate-saving-tips";
-import { initialBudgets, initialCategories, currencies, initialIncomes } from "@/lib/data";
+import { initialCategories, currencies } from "@/lib/data";
 import type { Budget, Category, Expense, Currency, Income } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
+import { Pie, PieChart, ResponsiveContainer } from "recharts";
 import { z } from "zod";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -465,7 +465,7 @@ export default function ClarityDashboard() {
 
           <Dialog open={isExpenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" variant="destructive">
+              <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" />
                 Log Expense
               </Button>
