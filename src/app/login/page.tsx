@@ -52,16 +52,15 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      // The redirect will be handled by the AuthProvider,
-      // so we don't need to call router.push() here.
-      // We also don't set isLoading to false, so it shows until the page changes.
+      // The redirection will be handled by the useAuth hook.
+      // We don't need to set isLoading to false here, so the button remains in a loading state until the redirect happens.
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login Failed",
         description: "Please check your email and password and try again.",
       });
-      setIsLoading(false); // Only stop loading if there's an error
+      setIsLoading(false);
     }
   }
 

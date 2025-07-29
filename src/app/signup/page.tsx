@@ -52,14 +52,14 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
-      router.push("/dashboard");
+      // The redirection will be handled by the useAuth hook.
+      // We don't need to set isLoading to false here, so the button remains in a loading state until the redirect happens.
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
         description: error.message,
       });
-    } finally {
       setIsLoading(false);
     }
   }
