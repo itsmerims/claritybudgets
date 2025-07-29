@@ -33,18 +33,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (loading) return;
 
     const isAuthPage = pathname === '/login' || pathname === '/signup';
+    const isLandingPage = pathname === '/';
     
-    if (!user && !isAuthPage && pathname !== '/') {
+    // If there's no user, and we are not on a public page, redirect to login.
+    if (!user && !isAuthPage && !isLandingPage) {
       router.push('/login');
     }
     
+    // If there is a user, and we are on an auth page, redirect to the dashboard.
     if (user && isAuthPage) {
       router.push('/dashboard');
     }
   }, [user, loading, router, pathname]);
 
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isLandingPage = pathname === '/';
+
+  // While initial loading is happening, show a global loader.
   if (loading) {
     return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If we are on a protected page and there's no user, we show a loader
+  // while the redirect to /login happens.
+  if (!user && !isAuthPage && !isLandingPage) {
+      return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>

@@ -52,15 +52,16 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      router.push("/dashboard");
+      // The redirect will be handled by the AuthProvider,
+      // so we don't need to call router.push() here.
+      // We also don't set isLoading to false, so it shows until the page changes.
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message,
+        description: "Please check your email and password and try again.",
       });
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Only stop loading if there's an error
     }
   }
 
