@@ -42,6 +42,9 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
+       <footer className="flex items-center justify-center p-4 border-t">
+        <p className="text-sm text-muted-foreground">Made with ❤️ by you</p>
+      </footer>
     </div>
   );
 }
