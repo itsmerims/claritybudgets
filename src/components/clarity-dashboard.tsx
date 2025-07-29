@@ -2,12 +2,11 @@
 
 import { autoCategorizeExpense } from "@/ai/flows/auto-categorize-expense";
 import { generateSavingTips } from "@/ai/flows/generate-saving-tips";
-import { initialBudgets, initialCategories, initialExpenses } from "@/lib/data";
-import type { Budget, Category, Expense } from "@/lib/types";
+import { initialBudgets, initialCategories, currencies } from "@/lib/data";
+import type { Budget, Category, Expense, Currency } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  DollarSign,
   Landmark,
   Lightbulb,
   Loader2,
@@ -17,6 +16,7 @@ import {
   TrendingUp,
   Wallet,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -55,6 +55,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required."),
@@ -74,11 +75,12 @@ export default function ClarityDashboard() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [currency, setCurrency] = useState<Currency>(currencies[0]);
 
   // Hydration fix
   useEffect(() => {
-    setExpenses(initialExpenses);
-    setBudgets(initialBudgets);
+    setExpenses([]);
+    setBudgets([]);
   }, []);
   
 
@@ -176,7 +178,7 @@ export default function ClarityDashboard() {
     setExpenseDialogOpen(false);
     toast({
       title: "Expense Added",
-      description: `${values.description} for $${values.amount} has been logged.`,
+      description: `${values.description} for ${currency.symbol}${values.amount} has been logged.`,
     });
   }
 
@@ -201,7 +203,7 @@ export default function ClarityDashboard() {
       title: "Budget Set",
       description: `Budget for ${
         categoryMap[values.categoryId]?.name
-      } set to $${values.amount}.`,
+      } set to ${currency.symbol}${values.amount}.`,
     });
   }
 
@@ -273,6 +275,22 @@ export default function ClarityDashboard() {
           <span className="font-headline">ClarityBudgets</span>
         </h1>
         <div className="ml-auto flex items-center gap-2">
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <span>{currency.code}</span>
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {currencies.map((c) => (
+                <DropdownMenuItem key={c.code} onClick={() => setCurrency(c)}>
+                  {c.code} ({c.symbol})
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Dialog open={isBudgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
@@ -324,7 +342,7 @@ export default function ClarityDashboard() {
                         <FormLabel>Budget Amount</FormLabel>
                         <FormControl>
                            <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
                             <Input type="number" step="0.01" placeholder="0.00" {...field} className="pl-8"/>
                            </div>
                         </FormControl>
@@ -380,7 +398,7 @@ export default function ClarityDashboard() {
                         <FormLabel>Amount</FormLabel>
                         <FormControl>
                            <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
                             <Input type="number" step="0.01" placeholder="0.00" {...field} className="pl-8"/>
                            </div>
                         </FormControl>
@@ -446,13 +464,13 @@ export default function ClarityDashboard() {
         <Card className="md:col-span-1 lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
-              <DollarSign className="h-5 w-5" />
+              <span className="text-xl">{currency.symbol}</span>
               Total Spent
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold font-headline">
-              ${totalSpent.toFixed(2)}
+              {currency.symbol}{totalSpent.toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -466,7 +484,7 @@ export default function ClarityDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold font-headline">
-              ${totalBudget.toFixed(2)}
+              {currency.symbol}{totalBudget.toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -480,7 +498,7 @@ export default function ClarityDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold font-headline">
-              ${remainingBudget.toFixed(2)}
+              {currency.symbol}{remainingBudget.toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -499,7 +517,7 @@ export default function ClarityDashboard() {
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium">{budget.categoryName}</span>
                     <span className="text-muted-foreground">
-                      ${budget.spent.toFixed(2)} / ${budget.amount.toFixed(2)}
+                      {currency.symbol}{budget.spent.toFixed(2)} / {currency.symbol}{budget.amount.toFixed(2)}
                     </span>
                   </div>
                   <Progress value={budget.progress} className="h-2" />
@@ -525,7 +543,7 @@ export default function ClarityDashboard() {
               <PieChart>
                 <ChartTooltip
                   cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
+                  content={<ChartTooltipContent hideLabel formatter={(value) => `${currency.symbol}${value.toLocaleString()}`} />}
                 />
                 <Pie
                   data={chartData}
@@ -602,7 +620,7 @@ export default function ClarityDashboard() {
                       <TableCell className="font-medium">{expense.description}</TableCell>
                       <TableCell>{categoryMap[expense.categoryId]?.name}</TableCell>
                       <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">${expense.amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{currency.symbol}{expense.amount.toFixed(2)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -620,3 +638,5 @@ export default function ClarityDashboard() {
     </div>
   );
 }
+
+    

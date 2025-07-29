@@ -16,3 +16,11 @@ export interface Budget {
   categoryId: string;
   amount: number;
 }
+
+export interface Currency {
+    code: string;
+    symbol: string;
+    name: string;
+}
+
+    
