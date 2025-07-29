@@ -43,7 +43,9 @@ export default function LandingPage() {
         </section>
       </main>
        <footer className="flex items-center justify-center p-4 border-t">
-        <p className="text-sm text-muted-foreground">Made with ❤️ by you</p>
+        <p className="text-sm text-muted-foreground">
+            Made with ❤️ by <a href="https://www.linkedin.com/in/itsmerims/" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">Rims</a>
+        </p>
       </footer>
     </div>
   );
