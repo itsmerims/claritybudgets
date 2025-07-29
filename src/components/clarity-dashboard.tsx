@@ -1,3 +1,4 @@
+
 "use client";
 
 import { autoCategorizeExpense } from "@/ai/flows/auto-categorize-expense";
@@ -21,6 +22,7 @@ import {
   ArrowDown,
   ArrowUp,
   RefreshCcw,
+  LogOut,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -63,6 +65,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/use-auth";
+import { auth } from "@/lib/firebase";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required."),
@@ -84,6 +88,7 @@ const budgetSchema = z.object({
 
 export default function ClarityDashboard() {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [isMounted, setIsMounted] = useState(false);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -318,6 +323,10 @@ export default function ClarityDashboard() {
     } finally {
       setIsGeneratingTips(false);
     }
+  }
+
+  async function handleLogout() {
+    await auth.signOut();
   }
 
   if (!isMounted) {
@@ -584,6 +593,9 @@ export default function ClarityDashboard() {
               </Form>
             </DialogContent>
           </Dialog>
+          <Button size="sm" variant="ghost" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" /> Logout
+          </Button>
         </div>
       </header>
       <main className="flex-1 p-4 md:p-6 grid gap-6 md:grid-cols-3 lg:grid-cols-4">
