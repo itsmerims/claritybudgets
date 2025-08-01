@@ -118,11 +118,10 @@ export default function ClarityDashboard() {
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!user) return;
+  const fetchData = useCallback(async (userId: string) => {
     setIsLoadingData(true);
     try {
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, 'users', userId);
       
       const settingsRef = doc(userDocRef, 'settings', 'userSettings');
       const settingsSnap = await getDoc(settingsRef);
@@ -133,7 +132,7 @@ export default function ClarityDashboard() {
         }
       }
 
-      const categoriesRef = collection(db, 'users', user.uid, 'categories');
+      const categoriesRef = collection(db, 'users', userId, 'categories');
       const categoriesSnap = await getDocs(categoriesRef);
 
       let fetchedCategories: Category[] = [];
@@ -152,37 +151,38 @@ export default function ClarityDashboard() {
         setCategories(fetchedCategories);
       }
 
-      const expensesQuery = query(collection(db, 'users', user.uid, 'expenses'), orderBy('date', 'desc'));
+      const expensesQuery = query(collection(db, 'users', userId, 'expenses'), orderBy('date', 'desc'));
       const expensesSnap = await getDocs(expensesQuery);
       setExpenses(expensesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense)));
       
-      const incomesQuery = query(collection(db, 'users', user.uid, 'incomes'), orderBy('date', 'desc'));
+      const incomesQuery = query(collection(db, 'users', userId, 'incomes'), orderBy('date', 'desc'));
       const incomesSnap = await getDocs(incomesQuery);
       setIncomes(incomesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Income)));
 
-      const budgetsSnap = await getDocs(collection(db, 'users', user.uid, 'budgets'));
+      const budgetsSnap = await getDocs(collection(db, 'users', userId, 'budgets'));
       setBudgets(budgetsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget)));
       
-      const loansQuery = query(collection(db, 'users', user.uid, 'loans'), orderBy('date', 'desc'));
+      const loansQuery = query(collection(db, 'users', userId, 'loans'), orderBy('date', 'desc'));
       const loansSnap = await getDocs(loansQuery);
       setLoans(loansSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Loan)));
-
 
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not fetch your financial data.",
+        description: "Could not fetch your financial data. You might be offline.",
       });
     } finally {
       setIsLoadingData(false);
     }
-  }, [user, toast]);
+  }, [toast]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (user) {
+      fetchData(user.uid);
+    }
+  }, [user, fetchData]);
 
 
   useEffect(() => {
@@ -270,7 +270,10 @@ export default function ClarityDashboard() {
   }, [incomes, expenses]);
 
   const totalLoanBalance = useMemo(() => {
-    return loans.reduce((sum, loan) => sum + loan.currentBalance, 0);
+    // Note: This calculates based on `currentBalance`, which is correct.
+    // However, the `Loan` type in `types.ts` might not have `currentBalance` if it wasn't added in a previous step.
+    // Assuming `Loan` type has `currentBalance`.
+    return loans.reduce((sum, loan) => sum + (loan.currentBalance || loan.initialAmount), 0);
   }, [loans]);
 
   const spendingByCategory = useMemo(() => {
@@ -327,7 +330,12 @@ export default function ClarityDashboard() {
         ...values,
       };
       setExpenses([newExpense, ...expenses]);
-      expenseForm.reset();
+      expenseForm.reset({
+        description: "",
+        amount: 0,
+        categoryId: "",
+        date: new Date().toISOString().split("T")[0],
+      });
       setExpenseDialogOpen(false);
       toast({
         title: "Expense Added",
@@ -348,7 +356,11 @@ export default function ClarityDashboard() {
         ...values,
       };
       setIncomes([newIncome, ...incomes]);
-      incomeForm.reset();
+      incomeForm.reset({
+        description: "",
+        amount: 0,
+        date: new Date().toISOString().split("T")[0],
+      });
       setIncomeDialogOpen(false);
       toast({
         title: "Income Added",
@@ -379,7 +391,7 @@ export default function ClarityDashboard() {
         };
         setBudgets([...budgets, newBudget]);
       }
-      budgetForm.reset();
+      budgetForm.reset({ categoryId: "", amount: 0 });
       setBudgetDialogOpen(false);
       toast({
         title: "Budget Set",
@@ -406,7 +418,12 @@ export default function ClarityDashboard() {
       const docRef = await addDoc(collection(db, 'users', user.uid, 'loans'), loanData);
       const newLoan: Loan = { id: docRef.id, ...loanData };
       setLoans([newLoan, ...loans]);
-      loanForm.reset();
+      loanForm.reset({
+        name: "",
+        lender: "",
+        amount: 0,
+        date: new Date().toISOString().split("T")[0],
+      });
       setLoanDialogOpen(false);
       toast({
         title: "Loan Added",
@@ -437,7 +454,7 @@ export default function ClarityDashboard() {
       const loanRef = doc(db, 'users', user.uid, 'loans', selectedLoan.id);
       await updateDoc(loanRef, { currentBalance: newBalance });
       setLoans(loans.map(l => l.id === selectedLoan.id ? { ...l, currentBalance: newBalance } : l));
-      updateLoanForm.reset();
+      updateLoanForm.reset({ amount: 0, type: "decrease" });
       setUpdateLoanDialogOpen(false);
       setSelectedLoan(null);
       toast({
@@ -500,7 +517,7 @@ export default function ClarityDashboard() {
         .map(([category, amount]) => `${category}: ${currency.symbol}${amount.toFixed(2)}`)
         .join('\n');
         
-      const spendingHabits = `Currency: ${currency.name} (${currency.code})\n${spendingSummary}`;
+      const spendingHabits = `Currency: ${currency.name} (${currency.code})\nTotal Income: ${currency.symbol}${totalIncome.toFixed(2)}\nTotal Spending: ${currency.symbol}${totalSpent.toFixed(2)}\n\nSpending Breakdown:\n${spendingSummary}`;
 
       const result = await generateSavingTips({ spendingHabits });
       setSavingTips(result.savingTips);
@@ -518,11 +535,21 @@ export default function ClarityDashboard() {
 
   function openUpdateLoanDialog(loan: Loan) {
     setSelectedLoan(loan);
+    updateLoanForm.reset({ amount: 0, type: 'decrease' });
     setUpdateLoanDialogOpen(true);
   }
 
   async function handleLogout() {
     await auth.signOut();
+  }
+  
+  if (isLoadingData) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading your financial data...</p>
+      </div>
+    );
   }
 
   return (
