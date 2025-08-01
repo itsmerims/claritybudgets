@@ -30,6 +30,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { Pie, PieChart, ResponsiveContainer, Cell, Legend } from "recharts";
 import { z } from "zod";
+import Link from 'next/link';
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -528,8 +529,10 @@ export default function ClarityDashboard() {
     <div className="flex min-h-screen w-full flex-col bg-background">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
         <h1 className="flex items-center gap-2 text-lg font-semibold md:text-2xl">
-          <Sprout className="h-6 w-6 text-primary" />
-          <span className="font-headline">ClarityBudgets</span>
+          <Link href="/" className="flex items-center gap-2">
+            <Sprout className="h-6 w-6 text-primary" />
+            <span className="font-headline">ClarityBudgets</span>
+          </Link>
         </h1>
         <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
@@ -1172,7 +1175,7 @@ export default function ClarityDashboard() {
                                           <FormControl>
                                               <SelectTrigger>
                                                   <SelectValue placeholder="Select a transaction type" />
-                                              </Trigger>
+                                              </SelectTrigger>
                                           </FormControl>
                                           <SelectContent>
                                               <SelectItem value="decrease">
