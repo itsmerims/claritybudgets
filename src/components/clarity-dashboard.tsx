@@ -454,10 +454,21 @@ export default function ClarityDashboard() {
     
     let newExpense: Expense | null = null;
     if (values.type === 'decrease') {
-        const loanPaymentCategory = categories.find(c => c.name === "Loan Repayment");
+        let loanPaymentCategory = categories.find(c => c.name === "Loan Repayment");
+
         if (!loanPaymentCategory) {
-            toast({ variant: "destructive", title: "Error", description: "Loan Repayment category not found." });
-            return;
+            try {
+                const categoryData = { name: "Loan Repayment" };
+                const categoriesRef = collection(db, 'users', user.uid, 'categories');
+                const newCategoryDoc = await addDoc(categoriesRef, categoryData);
+                const newCategory: Category = { id: newCategoryDoc.id, name: categoryData.name };
+                setCategories(prev => [...prev, newCategory]);
+                loanPaymentCategory = newCategory;
+            } catch (error) {
+                console.error("Error creating 'Loan Repayment' category:", error);
+                toast({ variant: "destructive", title: "Error", description: "Could not create a required category. Please try again." });
+                return;
+            }
         }
 
         const expenseData: Omit<Expense, 'id'> = {
