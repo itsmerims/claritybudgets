@@ -69,7 +69,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { auth, db } from "@/lib/firebase";
-import { collection, doc, getDocs, writeBatch, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, addDoc, updateDoc, deleteDoc, query, orderBy, getDoc, setDoc } from 'firebase/firestore';
 import { ThemeToggle } from "./theme-toggle";
 
 
@@ -117,20 +117,21 @@ export default function ClarityDashboard() {
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
-  useEffect(() => {
-    const savedCurrency = localStorage.getItem("clarity-currency");
-    if (savedCurrency) {
-      const foundCurrency = currencies.find(c => c.code === savedCurrency);
-      if (foundCurrency) {
-        setCurrency(foundCurrency);
-      }
-    }
-  }, []);
-
   const fetchData = useCallback(async () => {
     if (!user) return;
     setIsLoadingData(true);
     try {
+      const userDocRef = doc(db, 'users', user.uid);
+      
+      const settingsRef = doc(userDocRef, 'settings', 'userSettings');
+      const settingsSnap = await getDoc(settingsRef);
+      if (settingsSnap.exists() && settingsSnap.data().currency) {
+        const foundCurrency = currencies.find(c => c.code === settingsSnap.data().currency);
+        if (foundCurrency) {
+          setCurrency(foundCurrency);
+        }
+      }
+
       const categoriesRef = collection(db, 'users', user.uid, 'categories');
       const categoriesSnap = await getDocs(categoriesRef);
 
@@ -184,8 +185,20 @@ export default function ClarityDashboard() {
 
 
   useEffect(() => {
-    localStorage.setItem("clarity-currency", currency.code);
-  }, [currency]);
+    async function saveCurrency() {
+        if (!user) return;
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            const settingsRef = doc(userDocRef, 'settings', 'userSettings');
+            await setDoc(settingsRef, { currency: currency.code }, { merge: true });
+        } catch (error) {
+            console.error("Error saving currency:", error);
+        }
+    }
+    if(!isLoadingData) { // only save after initial data has loaded
+        saveCurrency();
+    }
+  }, [currency, user, isLoadingData]);
 
   const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [isIncomeDialogOpen, setIncomeDialogOpen] = useState(false);
@@ -1159,7 +1172,7 @@ export default function ClarityDashboard() {
                                           <FormControl>
                                               <SelectTrigger>
                                                   <SelectValue placeholder="Select a transaction type" />
-                                              </SelectTrigger>
+                                              </Trigger>
                                           </FormControl>
                                           <SelectContent>
                                               <SelectItem value="decrease">
