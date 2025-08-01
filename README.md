@@ -2,9 +2,6 @@
 
 ClarityBudgets is a focused, intelligent budgeting and expense tracking application designed to bring clarity to your personal finances. Built with Next.js and powered by AI, it offers a simple yet powerful way to manage your money.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FUSERNAME%2Fclaritybudgets&env=GEMINI_API_KEY&envDescription=Your%20Google%20AI%20API%20key%20for%20powering%20AI%20features.&project-name=claritybudgets&repository-name=claritybudgets)
-
-**Important:** Before deploying, make sure to replace `USERNAME` in the deployment link above with your actual GitHub username.
 
 ## Features
 

@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Sprout } from 'lucide-react';
 import Link from 'next/link';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function LandingPage() {
   return (
@@ -12,6 +13,7 @@ export default function LandingPage() {
           <span className="font-headline">ClarityBudgets</span>
         </h1>
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
           <Button asChild variant="ghost">
             <Link href="/login">Login</Link>
           </Button>
