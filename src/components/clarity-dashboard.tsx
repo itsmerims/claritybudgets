@@ -25,6 +25,7 @@ import {
   LogOut,
   HandCoins,
   Minus,
+  MoreVertical,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
@@ -66,7 +67,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { auth, db } from "@/lib/firebase";
@@ -603,14 +604,14 @@ export default function ClarityDashboard() {
         <h1 className="flex items-center gap-2 text-lg font-semibold md:text-2xl">
           <Link href="/" className="flex items-center gap-2">
             <Sprout className="h-6 w-6 text-primary" />
-            <span className="font-headline">ClarityBudgets</span>
+            <span className="font-headline hidden sm:inline">ClarityBudgets</span>
           </Link>
         </h1>
         <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="w-20">
                 <span>{currency.code}</span>
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
@@ -624,14 +625,84 @@ export default function ClarityDashboard() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Dialog open={isBudgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline">
-                <Landmark className="mr-2 h-4 w-4" />
-                Set Budget
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
+          {/* Desktop Buttons */}
+          <div className="hidden sm:flex items-center gap-2">
+            <Dialog open={isBudgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Landmark className="mr-2 h-4 w-4" />
+                  Set Budget
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+
+            <Dialog open={isIncomeDialogOpen} onOpenChange={setIncomeDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline" className="text-green-600 border-green-600/50 hover:bg-green-600/10 hover:text-green-600">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Income
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+
+            <Dialog open={isExpenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Log Expense
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+
+            <Dialog open={isLoanDialogOpen} onOpenChange={setLoanDialogOpen}>
+              <DialogTrigger asChild>
+                  <Button size="sm" variant="outline">
+                      <HandCoins className="mr-2 h-4 w-4" /> Log Loan
+                  </Button>
+              </DialogTrigger>
+            </Dialog>
+          </div>
+          
+          {/* Mobile Dropdown */}
+          <div className="sm:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setExpenseDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span>Log Expense</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIncomeDialogOpen(true)}>
+                   <Plus className="mr-2 h-4 w-4" />
+                   <span>Add Income</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setBudgetDialogOpen(true)}>
+                   <Landmark className="mr-2 h-4 w-4" />
+                   <span>Set Budget</span>
+                </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => setLoanDialogOpen(true)}>
+                    <HandCoins className="mr-2 h-4 w-4" />
+                    <span>Log Loan</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <Button size="sm" variant="ghost" onClick={handleLogout} className="hidden sm:flex">
+              <LogOut className="mr-2 h-4 w-4" /> Logout
+          </Button>
+
+          {/* Shared Dialog Content */}
+           <DialogContent>
               <DialogHeader>
                 <DialogTitle>Set a Budget</DialogTitle>
                 <DialogDescription>
@@ -689,15 +760,9 @@ export default function ClarityDashboard() {
                 </form>
               </Form>
             </DialogContent>
-          </Dialog>
+          
 
            <Dialog open={isIncomeDialogOpen} onOpenChange={setIncomeDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="text-green-600 border-green-600/50 hover:bg-green-600/10 hover:text-green-600">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Income
-              </Button>
-            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Log a New Income</DialogTitle>
@@ -761,12 +826,6 @@ export default function ClarityDashboard() {
           </Dialog>
 
           <Dialog open={isExpenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Log Expense
-              </Button>
-            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Log a New Expense</DialogTitle>
@@ -862,11 +921,6 @@ export default function ClarityDashboard() {
           </Dialog>
 
           <Dialog open={isLoanDialogOpen} onOpenChange={setLoanDialogOpen}>
-            <DialogTrigger asChild>
-                <Button size="sm" variant="outline">
-                    <HandCoins className="mr-2 h-4 w-4" /> Log Loan
-                </Button>
-            </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Log a New Loan</DialogTitle>
@@ -938,22 +992,18 @@ export default function ClarityDashboard() {
                 </Form>
             </DialogContent>
           </Dialog>
-
-          <Button size="sm" variant="ghost" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" /> Logout
-          </Button>
         </div>
       </header>
-      <main className="flex-1 p-4 md:p-6 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <main className="flex-1 p-4 md:p-6 grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="md:col-span-1 lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground text-green-600">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground text-green-600">
               <DollarSign className="h-5 w-5" />
               Total Income
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold font-headline text-green-600">
+            <p className="text-2xl md:text-3xl font-bold font-headline text-green-600">
               {currency.symbol}{totalIncome.toFixed(2)}
             </p>
           </CardContent>
@@ -961,13 +1011,13 @@ export default function ClarityDashboard() {
 
         <Card className="md:col-span-1 lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground text-red-600">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground text-red-600">
               <TrendingUp className="h-5 w-5" />
               Total Spent
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold font-headline text-red-600">
+            <p className="text-2xl md:text-3xl font-bold font-headline text-red-600">
               {currency.symbol}{totalSpent.toFixed(2)}
             </p>
           </CardContent>
@@ -975,13 +1025,13 @@ export default function ClarityDashboard() {
 
         <Card className={cn(remainingBalance < 0 ? 'bg-destructive/10 border-destructive/50' : '')}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Wallet className="h-5 w-5" />
               Remaining Balance
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold font-headline">
+            <p className="text-2xl md:text-3xl font-bold font-headline">
               {currency.symbol}{remainingBalance.toFixed(2)}
             </p>
           </CardContent>
@@ -989,13 +1039,13 @@ export default function ClarityDashboard() {
 
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                     <HandCoins className="h-5 w-5" />
                     Total Loans
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-3xl font-bold font-headline">
+                <p className="text-2xl md:text-3xl font-bold font-headline">
                     {currency.symbol}{totalLoanBalance.toFixed(2)}
                 </p>
             </CardContent>
@@ -1127,98 +1177,164 @@ export default function ClarityDashboard() {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="expenses">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {expenses.length > 0 ? (
-                      expenses.map((expense) => (
-                        <TableRow key={expense.id}>
-                          <TableCell className="font-medium">{expense.description}</TableCell>
-                          <TableCell>{categoryMap[expense.categoryId]?.name}</TableCell>
-                          <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-right font-medium text-red-600">-{currency.symbol}{expense.amount.toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center h-24">
-                          No expenses yet.
-                        </TableCell>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TabsContent>
-              <TabsContent value="income">
-                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {incomes.length > 0 ? (
-                      incomes.map((income) => (
-                        <TableRow key={income.id}>
-                          <TableCell className="font-medium">{income.description}</TableCell>
-                          <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-right font-medium text-green-600">+{currency.symbol}{income.amount.toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center h-24">
-                          No income yet.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TabsContent>
-              <TabsContent value="loans">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Loan</TableHead>
-                      <TableHead>Lender</TableHead>
-                      <TableHead>Initial Amount</TableHead>
-                      <TableHead>Current Balance</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loans.length > 0 ? (
-                      loans.map((loan) => (
-                        <TableRow key={loan.id}>
-                          <TableCell className="font-medium">{loan.name}</TableCell>
-                          <TableCell>{loan.lender}</TableCell>
-                          <TableCell>{currency.symbol}{loan.initialAmount.toFixed(2)}</TableCell>
-                          <TableCell className="font-medium">{currency.symbol}{loan.currentBalance.toFixed(2)}</TableCell>
-                          <TableCell>{new Date(loan.date).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => openUpdateLoanDialog(loan)}>Update</Button>
+                    </TableHeader>
+                    <TableBody>
+                      {expenses.length > 0 ? (
+                        expenses.map((expense) => (
+                          <TableRow key={expense.id}>
+                            <TableCell className="font-medium">{expense.description}</TableCell>
+                            <TableCell>{categoryMap[expense.categoryId]?.name}</TableCell>
+                            <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right font-medium text-red-600">-{currency.symbol}{expense.amount.toFixed(2)}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center h-24">
+                            No expenses yet.
                           </TableCell>
                         </TableRow>
-                      ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                 <div className="sm:hidden space-y-4 pt-4">
+                    {expenses.length > 0 ? (
+                        expenses.map((expense) => (
+                            <div key={expense.id} className="flex items-center justify-between p-3 rounded-lg bg-card border">
+                                <div>
+                                    <p className="font-medium">{expense.description}</p>
+                                    <p className="text-sm text-muted-foreground">{categoryMap[expense.categoryId]?.name} &middot; {new Date(expense.date).toLocaleDateString()}</p>
+                                </div>
+                                <p className="font-medium text-red-600">-{currency.symbol}{expense.amount.toFixed(2)}</p>
+                            </div>
+                        ))
                     ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center h-24">
-                          No loans yet.
-                        </TableCell>
-                      </TableRow>
+                        <p className="text-center text-muted-foreground py-10">No expenses yet.</p>
                     )}
-                  </TableBody>
-                </Table>
+                </div>
+              </TabsContent>
+              <TabsContent value="income">
+                 <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incomes.length > 0 ? (
+                        incomes.map((income) => (
+                          <TableRow key={income.id}>
+                            <TableCell className="font-medium">{income.description}</TableCell>
+                            <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right font-medium text-green-600">+{currency.symbol}{income.amount.toFixed(2)}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center h-24">
+                            No income yet.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                 <div className="sm:hidden space-y-4 pt-4">
+                    {incomes.length > 0 ? (
+                        incomes.map((income) => (
+                            <div key={income.id} className="flex items-center justify-between p-3 rounded-lg bg-card border">
+                                <div>
+                                    <p className="font-medium">{income.description}</p>
+                                    <p className="text-sm text-muted-foreground">{new Date(income.date).toLocaleDateString()}</p>
+                                </div>
+                                <p className="font-medium text-green-600">+{currency.symbol}{income.amount.toFixed(2)}</p>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-center text-muted-foreground py-10">No income yet.</p>
+                    )}
+                </div>
+              </TabsContent>
+              <TabsContent value="loans">
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Loan</TableHead>
+                        <TableHead>Lender</TableHead>
+                        <TableHead>Initial Amount</TableHead>
+                        <TableHead>Current Balance</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loans.length > 0 ? (
+                        loans.map((loan) => (
+                          <TableRow key={loan.id}>
+                            <TableCell className="font-medium">{loan.name}</TableCell>
+                            <TableCell>{loan.lender}</TableCell>
+                            <TableCell>{currency.symbol}{loan.initialAmount.toFixed(2)}</TableCell>
+                            <TableCell className="font-medium">{currency.symbol}{loan.currentBalance.toFixed(2)}</TableCell>
+                            <TableCell>{new Date(loan.date).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm" onClick={() => openUpdateLoanDialog(loan)}>Update</Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center h-24">
+                            No loans yet.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="sm:hidden space-y-4 pt-4">
+                    {loans.length > 0 ? (
+                        loans.map((loan) => (
+                           <Card key={loan.id} className="p-4">
+                               <div className="flex justify-between items-start">
+                                   <div>
+                                       <p className="font-medium">{loan.name}</p>
+                                       <p className="text-sm text-muted-foreground">{loan.lender}</p>
+                                       <p className="text-xs text-muted-foreground pt-1">
+                                           Taken on: {new Date(loan.date).toLocaleDateString()}
+                                       </p>
+                                   </div>
+                                   <Button variant="outline" size="sm" onClick={() => openUpdateLoanDialog(loan)}>Update</Button>
+                               </div>
+                               <div className="flex justify-between items-end mt-4">
+                                   <div>
+                                       <p className="text-xs text-muted-foreground">Initial</p>
+                                       <p className="text-sm">{currency.symbol}{loan.initialAmount.toFixed(2)}</p>
+                                   </div>
+                                   <div>
+                                       <p className="text-xs text-muted-foreground text-right">Balance</p>
+                                       <p className="font-medium text-right">{currency.symbol}{loan.currentBalance.toFixed(2)}</p>
+                                   </div>
+                               </div>
+                           </Card>
+                        ))
+                    ) : (
+                        <p className="text-center text-muted-foreground py-10">No loans yet.</p>
+                    )}
+                </div>
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -1290,3 +1406,5 @@ export default function ClarityDashboard() {
     </div>
   );
 }
+
+    
