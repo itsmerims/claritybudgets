@@ -4,7 +4,7 @@
 import { autoCategorizeExpense } from "@/ai/flows/auto-categorize-expense";
 import { generateSavingTips } from "@/ai/flows/generate-saving-tips";
 import { initialCategories, currencies } from "@/lib/data";
-import type { Budget, Category, Expense, Currency, Income } from "@/lib/types";
+import type { Budget, Category, Expense, Currency, Income, Loan } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -23,6 +23,8 @@ import {
   ArrowUp,
   RefreshCcw,
   LogOut,
+  HandCoins,
+  Minus,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
@@ -89,6 +91,19 @@ const budgetSchema = z.object({
   amount: z.coerce.number().positive("Amount must be positive."),
 });
 
+const loanSchema = z.object({
+    name: z.string().min(1, "A name for the loan is required."),
+    lender: z.string().min(1, "Lender is required."),
+    amount: z.coerce.number().positive("Initial amount must be positive."),
+    date: z.string().min(1, "Date is required."),
+});
+
+const updateLoanSchema = z.object({
+    amount: z.coerce.number().min(0.01, "Amount must be a positive number."),
+    type: z.enum(["increase", "decrease"]),
+});
+
+
 export default function ClarityDashboard() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -98,7 +113,9 @@ export default function ClarityDashboard() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
+  const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
   useEffect(() => {
     const savedCurrency = localStorage.getItem("clarity-currency");
@@ -143,6 +160,11 @@ export default function ClarityDashboard() {
 
       const budgetsSnap = await getDocs(collection(db, 'users', user.uid, 'budgets'));
       setBudgets(budgetsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget)));
+      
+      const loansQuery = query(collection(db, 'users', user.uid, 'loans'), orderBy('date', 'desc'));
+      const loansSnap = await getDocs(loansQuery);
+      setLoans(loansSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Loan)));
+
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -168,6 +190,8 @@ export default function ClarityDashboard() {
   const [isExpenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [isIncomeDialogOpen, setIncomeDialogOpen] = useState(false);
   const [isBudgetDialogOpen, setBudgetDialogOpen] = useState(false);
+  const [isLoanDialogOpen, setLoanDialogOpen] = useState(false);
+  const [isUpdateLoanDialogOpen, setUpdateLoanDialogOpen] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [isGeneratingTips, setIsGeneratingTips] = useState(false);
   const [savingTips, setSavingTips] = useState("");
@@ -199,6 +223,24 @@ export default function ClarityDashboard() {
     },
   });
 
+   const loanForm = useForm<z.infer<typeof loanSchema>>({
+    resolver: zodResolver(loanSchema),
+    defaultValues: {
+      name: "",
+      lender: "",
+      amount: 0,
+      date: new Date().toISOString().split("T")[0],
+    },
+  });
+
+  const updateLoanForm = useForm<z.infer<typeof updateLoanSchema>>({
+    resolver: zodResolver(updateLoanSchema),
+    defaultValues: {
+      amount: 0,
+      type: "decrease",
+    },
+  });
+
   const categoryMap = useMemo(() => {
     return categories.reduce((acc, cat) => {
       acc[cat.id] = cat;
@@ -212,6 +254,10 @@ export default function ClarityDashboard() {
     const remainingBalance = totalIncome - totalSpent;
     return { totalIncome, totalSpent, remainingBalance };
   }, [incomes, expenses]);
+
+  const totalLoanBalance = useMemo(() => {
+    return loans.reduce((sum, loan) => sum + loan.currentBalance, 0);
+  }, [loans]);
 
   const spendingByCategory = useMemo(() => {
     return expenses.reduce((acc, expense) => {
@@ -333,6 +379,64 @@ export default function ClarityDashboard() {
     }
   }
 
+  async function handleAddLoan(values: z.infer<typeof loanSchema>) {
+    if (!user) return;
+    try {
+      const loanData = {
+        name: values.name,
+        lender: values.lender,
+        initialAmount: values.amount,
+        currentBalance: values.amount,
+        date: values.date,
+      };
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'loans'), loanData);
+      const newLoan: Loan = { id: docRef.id, ...loanData };
+      setLoans([newLoan, ...loans]);
+      loanForm.reset();
+      setLoanDialogOpen(false);
+      toast({
+        title: "Loan Added",
+        description: `Loan "${values.name}" for ${currency.symbol}${values.amount} has been logged.`,
+      });
+    } catch (error) {
+      console.error("Error adding loan:", error);
+      toast({ variant: "destructive", title: "Error", description: "Could not add loan." });
+    }
+  }
+
+  async function handleUpdateLoan(values: z.infer<typeof updateLoanSchema>) {
+    if (!user || !selectedLoan) return;
+
+    let newBalance = selectedLoan.currentBalance;
+    if (values.type === "decrease") {
+      newBalance -= values.amount;
+    } else {
+      newBalance += values.amount;
+    }
+
+    if (newBalance < 0) {
+      toast({ variant: "destructive", title: "Invalid Amount", description: "Balance cannot be negative." });
+      return;
+    }
+
+    try {
+      const loanRef = doc(db, 'users', user.uid, 'loans', selectedLoan.id);
+      await updateDoc(loanRef, { currentBalance: newBalance });
+      setLoans(loans.map(l => l.id === selectedLoan.id ? { ...l, currentBalance: newBalance } : l));
+      updateLoanForm.reset();
+      setUpdateLoanDialogOpen(false);
+      setSelectedLoan(null);
+      toast({
+        title: "Loan Updated",
+        description: `Loan "${selectedLoan.name}" balance is now ${currency.symbol}${newBalance.toFixed(2)}.`,
+      });
+    } catch (error) {
+      console.error("Error updating loan:", error);
+      toast({ variant: "destructive", title: "Error", description: "Could not update loan." });
+    }
+  }
+
+
   async function handleAutoCategorize() {
     const description = expenseForm.getValues("description");
     if (!description) {
@@ -396,6 +500,11 @@ export default function ClarityDashboard() {
     } finally {
       setIsGeneratingTips(false);
     }
+  }
+
+  function openUpdateLoanDialog(loan: Loan) {
+    setSelectedLoan(loan);
+    setUpdateLoanDialogOpen(true);
   }
 
   async function handleLogout() {
@@ -663,12 +772,91 @@ export default function ClarityDashboard() {
               </Form>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={isLoanDialogOpen} onOpenChange={setLoanDialogOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                    <HandCoins className="mr-2 h-4 w-4" /> Log Loan
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Log a New Loan</DialogTitle>
+                    <DialogDescription>
+                        Enter the details of the loan you've taken.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...loanForm}>
+                    <form onSubmit={loanForm.handleSubmit(handleAddLoan)} className="space-y-4">
+                        <FormField
+                            control={loanForm.control}
+                            name="name"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Loan Name</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., Car Loan" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={loanForm.control}
+                            name="lender"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Lender</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., Bank of America, Mom" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={loanForm.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Initial Amount</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
+                                            <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8" />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={loanForm.control}
+                            name="date"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Date</FormLabel>
+                                    <FormControl>
+                                        <Input type="date" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <Button type="submit">Add Loan</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+          </Dialog>
+
           <Button size="sm" variant="ghost" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
         </div>
       </header>
-      <main className="flex-1 p-4 md:p-6 grid gap-6 md:grid-cols-3 lg:grid-cols-4">
+      <main className="flex-1 p-4 md:p-6 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="md:col-span-1 lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground text-green-600">
@@ -697,7 +885,7 @@ export default function ClarityDashboard() {
           </CardContent>
         </Card>
 
-        <Card className={cn("md:col-span-1 lg:col-span-1", remainingBalance < 0 ? 'bg-destructive/10 border-destructive/50' : '')}>
+        <Card className={cn(remainingBalance < 0 ? 'bg-destructive/10 border-destructive/50' : '')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
               <Wallet className="h-5 w-5" />
@@ -711,7 +899,21 @@ export default function ClarityDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 lg:col-span-1">
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
+                    <HandCoins className="h-5 w-5" />
+                    Total Loans
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-3xl font-bold font-headline">
+                    {currency.symbol}{totalLoanBalance.toFixed(2)}
+                </p>
+            </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2 lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
               <Landmark className="h-5 w-5" />
@@ -737,7 +939,7 @@ export default function ClarityDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 lg:col-span-2">
+        <Card className="md:col-span-2 lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <PieChartIcon className="h-5 w-5" />
@@ -778,7 +980,7 @@ export default function ClarityDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="md:col-span-3 lg:col-span-2">
+        <Card className="md:col-span-2 lg:col-span-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5" />
@@ -819,18 +1021,21 @@ export default function ClarityDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 lg:col-span-4">
+        <Card className="md:col-span-2 lg:col-span-4">
           <CardHeader>
             <CardTitle>Recent Transactions</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="expenses">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="expenses">
                   <ArrowDown className="mr-2 h-4 w-4 text-red-500" /> Expenses
                 </TabsTrigger>
                 <TabsTrigger value="income">
                    <ArrowUp className="mr-2 h-4 w-4 text-green-500" /> Income
+                </TabsTrigger>
+                <TabsTrigger value="loans">
+                    <HandCoins className="mr-2 h-4 w-4" /> Loans
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="expenses">
@@ -891,10 +1096,109 @@ export default function ClarityDashboard() {
                   </TableBody>
                 </Table>
               </TabsContent>
+              <TabsContent value="loans">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Loan</TableHead>
+                      <TableHead>Lender</TableHead>
+                      <TableHead>Initial Amount</TableHead>
+                      <TableHead>Current Balance</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loans.length > 0 ? (
+                      loans.map((loan) => (
+                        <TableRow key={loan.id}>
+                          <TableCell className="font-medium">{loan.name}</TableCell>
+                          <TableCell>{loan.lender}</TableCell>
+                          <TableCell>{currency.symbol}{loan.initialAmount.toFixed(2)}</TableCell>
+                          <TableCell className="font-medium">{currency.symbol}{loan.currentBalance.toFixed(2)}</TableCell>
+                          <TableCell>{new Date(loan.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" onClick={() => openUpdateLoanDialog(loan)}>Update</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center h-24">
+                          No loans yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
       </main>
+
+      <Dialog open={isUpdateLoanDialogOpen} onOpenChange={(isOpen) => { setUpdateLoanDialogOpen(isOpen); if (!isOpen) setSelectedLoan(null); }}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Update Loan: {selectedLoan?.name}</DialogTitle>
+                  <DialogDescription>
+                      Increase the balance (borrow more) or decrease it (make a payment).
+                      Current Balance: {currency.symbol}{selectedLoan?.currentBalance.toFixed(2)}
+                  </DialogDescription>
+              </DialogHeader>
+              <Form {...updateLoanForm}>
+                  <form onSubmit={updateLoanForm.handleSubmit(handleUpdateLoan)} className="space-y-4">
+                      <FormField
+                          control={updateLoanForm.control}
+                          name="type"
+                          render={({ field }) => (
+                              <FormItem className="space-y-3">
+                                  <FormLabel>Transaction Type</FormLabel>
+                                  <FormControl>
+                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                          <FormControl>
+                                              <SelectTrigger>
+                                                  <SelectValue placeholder="Select a transaction type" />
+                                              </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                              <SelectItem value="decrease">
+                                                  <span className="flex items-center"><Minus className="mr-2 h-4 w-4 text-green-500" /> Make a Payment</span>
+                                              </SelectItem>
+                                              <SelectItem value="increase">
+                                                  <span className="flex items-center"><Plus className="mr-2 h-4 w-4 text-red-500" /> Borrow More</span>
+                                              </SelectItem>
+                                          </SelectContent>
+                                      </Select>
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={updateLoanForm.control}
+                          name="amount"
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Amount</FormLabel>
+                                  <FormControl>
+                                      <div className="relative">
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
+                                          <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8" />
+                                      </div>
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                      <DialogFooter>
+                          <Button type="submit">Update Balance</Button>
+                      </DialogFooter>
+                  </form>
+              </Form>
+          </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

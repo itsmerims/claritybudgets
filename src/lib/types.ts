@@ -29,3 +29,12 @@ export interface Currency {
     symbol: string;
     name: string;
 }
+
+export interface Loan {
+  id: string;
+  name: string;
+  lender: string;
+  initialAmount: number;
+  currentBalance: number;
+  date: string;
+}
