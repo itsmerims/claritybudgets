@@ -270,9 +270,6 @@ export default function ClarityDashboard() {
   }, [incomes, expenses]);
 
   const totalLoanBalance = useMemo(() => {
-    // Note: This calculates based on `currentBalance`, which is correct.
-    // However, the `Loan` type in `types.ts` might not have `currentBalance` if it wasn't added in a previous step.
-    // Assuming `Loan` type has `currentBalance`.
     return loans.reduce((sum, loan) => sum + (loan.currentBalance || loan.initialAmount), 0);
   }, [loans]);
 
@@ -438,32 +435,69 @@ export default function ClarityDashboard() {
   async function handleUpdateLoan(values: z.infer<typeof updateLoanSchema>) {
     if (!user || !selectedLoan) return;
 
+    const batch = writeBatch(db);
+
     let newBalance = selectedLoan.currentBalance;
     if (values.type === "decrease") {
-      newBalance -= values.amount;
+        newBalance -= values.amount;
     } else {
-      newBalance += values.amount;
+        newBalance += values.amount;
     }
 
     if (newBalance < 0) {
-      toast({ variant: "destructive", title: "Invalid Amount", description: "Balance cannot be negative." });
-      return;
+        toast({ variant: "destructive", title: "Invalid Amount", description: "Balance cannot be negative." });
+        return;
+    }
+    
+    const loanRef = doc(db, 'users', user.uid, 'loans', selectedLoan.id);
+    batch.update(loanRef, { currentBalance: newBalance });
+    
+    let newExpense: Expense | null = null;
+    if (values.type === 'decrease') {
+        const loanPaymentCategory = categories.find(c => c.name === "Loan Repayment");
+        if (!loanPaymentCategory) {
+            toast({ variant: "destructive", title: "Error", description: "Loan Repayment category not found." });
+            return;
+        }
+
+        const expenseData: Omit<Expense, 'id'> = {
+            description: `Payment for "${selectedLoan.name}"`,
+            amount: values.amount,
+            categoryId: loanPaymentCategory.id,
+            date: new Date().toISOString().split('T')[0],
+        };
+        
+        const expenseRef = doc(collection(db, 'users', user.uid, 'expenses'));
+        batch.set(expenseRef, expenseData);
+        newExpense = { id: expenseRef.id, ...expenseData };
     }
 
+
     try {
-      const loanRef = doc(db, 'users', user.uid, 'loans', selectedLoan.id);
-      await updateDoc(loanRef, { currentBalance: newBalance });
-      setLoans(loans.map(l => l.id === selectedLoan.id ? { ...l, currentBalance: newBalance } : l));
-      updateLoanForm.reset({ amount: 0, type: "decrease" });
-      setUpdateLoanDialogOpen(false);
-      setSelectedLoan(null);
-      toast({
-        title: "Loan Updated",
-        description: `Loan "${selectedLoan.name}" balance is now ${currency.symbol}${newBalance.toFixed(2)}.`,
-      });
+        await batch.commit();
+        
+        setLoans(loans.map(l => l.id === selectedLoan.id ? { ...l, currentBalance: newBalance } : l));
+        if (newExpense) {
+            setExpenses(prevExpenses => [newExpense!, ...prevExpenses]);
+        }
+        
+        updateLoanForm.reset({ amount: 0, type: "decrease" });
+        setUpdateLoanDialogOpen(false);
+        setSelectedLoan(null);
+        
+        toast({
+            title: "Loan Updated",
+            description: `Loan "${selectedLoan.name}" balance is now ${currency.symbol}${newBalance.toFixed(2)}.`,
+        });
+        if (newExpense) {
+            toast({
+                title: "Expense Logged",
+                description: `A payment of ${currency.symbol}${values.amount.toFixed(2)} was logged.`,
+            });
+        }
     } catch (error) {
-      console.error("Error updating loan:", error);
-      toast({ variant: "destructive", title: "Error", description: "Could not update loan." });
+        console.error("Error updating loan:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not update loan." });
     }
   }
 

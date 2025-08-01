@@ -8,6 +8,7 @@ export const initialCategories: Category[] = [
   { id: 'cat-5', name: 'Utilities' },
   { id: 'cat-6', name: 'Shopping' },
   { id: 'cat-7', name: 'Health' },
+  { id: 'cat-8', name: 'Loan Repayment' },
 ];
 
 export const initialExpenses: Expense[] = [];
