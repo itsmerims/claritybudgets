@@ -634,6 +634,64 @@ export default function ClarityDashboard() {
                   Set Budget
                 </Button>
               </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Set a Budget</DialogTitle>
+                  <DialogDescription>
+                    Define a budget for a category. This will update an existing budget if one is already set.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...budgetForm}>
+                  <form
+                    onSubmit={budgetForm.handleSubmit(handleAddBudget)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={budgetForm.control}
+                      name="categoryId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categories.map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={budgetForm.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Budget Amount</FormLabel>
+                          <FormControl>
+                             <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
+                              <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8"/>
+                             </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <Button type="submit">Set Budget</Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
             </Dialog>
 
             <Dialog open={isIncomeDialogOpen} onOpenChange={setIncomeDialogOpen}>
@@ -643,6 +701,66 @@ export default function ClarityDashboard() {
                   Add Income
                 </Button>
               </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Log a New Income</DialogTitle>
+                  <DialogDescription>
+                    Enter the details of your income below.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...incomeForm}>
+                  <form
+                    onSubmit={incomeForm.handleSubmit(handleAddIncome)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={incomeForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Monthly Salary" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={incomeForm.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount</FormLabel>
+                          <FormControl>
+                             <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
+                              <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8"/>
+                             </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={incomeForm.control}
+                      name="date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <Button type="submit">Add Income</Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
             </Dialog>
 
             <Dialog open={isExpenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
@@ -652,6 +770,98 @@ export default function ClarityDashboard() {
                   Log Expense
                 </Button>
               </DialogTrigger>
+               <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Log a New Expense</DialogTitle>
+                  <DialogDescription>
+                    Enter the details of your expense below.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...expenseForm}>
+                  <form
+                    onSubmit={expenseForm.handleSubmit(handleAddExpense)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={expenseForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Coffee with a friend" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={expenseForm.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount</FormLabel>
+                          <FormControl>
+                             <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
+                              <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8"/>
+                             </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={expenseForm.control}
+                      name="categoryId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <div className="flex gap-2">
+                             <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {categories.map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button variant="outline" type="button" onClick={handleAutoCategorize} disabled={isCategorizing}>
+                              {isCategorizing ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
+                            </Button>
+                          </div>
+                          <FormDescription>
+                            Or use AI to categorize based on description.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={expenseForm.control}
+                      name="date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <Button type="submit">Add Expense</Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
             </Dialog>
 
             <Dialog open={isLoanDialogOpen} onOpenChange={setLoanDialogOpen}>
@@ -660,6 +870,76 @@ export default function ClarityDashboard() {
                       <HandCoins className="mr-2 h-4 w-4" /> Log Loan
                   </Button>
               </DialogTrigger>
+               <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Log a New Loan</DialogTitle>
+                      <DialogDescription>
+                          Enter the details of the loan you've taken.
+                      </DialogDescription>
+                  </DialogHeader>
+                  <Form {...loanForm}>
+                      <form onSubmit={loanForm.handleSubmit(handleAddLoan)} className="space-y-4">
+                          <FormField
+                              control={loanForm.control}
+                              name="name"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Loan Name</FormLabel>
+                                      <FormControl>
+                                          <Input placeholder="e.g., Car Loan" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={loanForm.control}
+                              name="lender"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Lender</FormLabel>
+                                      <FormControl>
+                                          <Input placeholder="e.g., Bank of America, Mom" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={loanForm.control}
+                              name="amount"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Initial Amount</FormLabel>
+                                      <FormControl>
+                                          <div className="relative">
+                                              <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
+                                              <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8" />
+                                          </div>
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={loanForm.control}
+                              name="date"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Date</FormLabel>
+                                      <FormControl>
+                                          <Input type="date" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <DialogFooter>
+                              <Button type="submit">Add Loan</Button>
+                          </DialogFooter>
+                      </form>
+                  </Form>
+              </DialogContent>
             </Dialog>
           </div>
           
@@ -701,297 +981,6 @@ export default function ClarityDashboard() {
               <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
 
-          {/* Shared Dialog Content */}
-           <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Set a Budget</DialogTitle>
-                <DialogDescription>
-                  Define a budget for a category. This will update an existing budget if one is already set.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...budgetForm}>
-                <form
-                  onSubmit={budgetForm.handleSubmit(handleAddBudget)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={budgetForm.control}
-                    name="categoryId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categories.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={budgetForm.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Budget Amount</FormLabel>
-                        <FormControl>
-                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8"/>
-                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button type="submit">Set Budget</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          
-
-           <Dialog open={isIncomeDialogOpen} onOpenChange={setIncomeDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Log a New Income</DialogTitle>
-                <DialogDescription>
-                  Enter the details of your income below.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...incomeForm}>
-                <form
-                  onSubmit={incomeForm.handleSubmit(handleAddIncome)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={incomeForm.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Monthly Salary" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={incomeForm.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Amount</FormLabel>
-                        <FormControl>
-                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8"/>
-                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={incomeForm.control}
-                    name="date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button type="submit">Add Income</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isExpenseDialogOpen} onOpenChange={setExpenseDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Log a New Expense</DialogTitle>
-                <DialogDescription>
-                  Enter the details of your expense below.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...expenseForm}>
-                <form
-                  onSubmit={expenseForm.handleSubmit(handleAddExpense)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={expenseForm.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Coffee with a friend" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={expenseForm.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Amount</FormLabel>
-                        <FormControl>
-                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8"/>
-                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={expenseForm.control}
-                    name="categoryId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <div className="flex gap-2">
-                           <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categories.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                  {cat.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button variant="outline" type="button" onClick={handleAutoCategorize} disabled={isCategorizing}>
-                            {isCategorizing ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
-                          </Button>
-                        </div>
-                        <FormDescription>
-                          Or use AI to categorize based on description.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={expenseForm.control}
-                    name="date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button type="submit">Add Expense</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isLoanDialogOpen} onOpenChange={setLoanDialogOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Log a New Loan</DialogTitle>
-                    <DialogDescription>
-                        Enter the details of the loan you've taken.
-                    </DialogDescription>
-                </DialogHeader>
-                <Form {...loanForm}>
-                    <form onSubmit={loanForm.handleSubmit(handleAddLoan)} className="space-y-4">
-                        <FormField
-                            control={loanForm.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Loan Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="e.g., Car Loan" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={loanForm.control}
-                            name="lender"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Lender</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="e.g., Bank of America, Mom" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={loanForm.control}
-                            name="amount"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Initial Amount</FormLabel>
-                                    <FormControl>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{currency.symbol}</span>
-                                            <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={e => e.target.select()} className="pl-8" />
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={loanForm.control}
-                            name="date"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Date</FormLabel>
-                                    <FormControl>
-                                        <Input type="date" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <DialogFooter>
-                            <Button type="submit">Add Loan</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-          </Dialog>
         </div>
       </header>
       <main className="flex-1 p-4 md:p-6 grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -1406,5 +1395,3 @@ export default function ClarityDashboard() {
     </div>
   );
 }
-
-    
